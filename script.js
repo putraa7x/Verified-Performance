@@ -12,7 +12,23 @@ const $ = id => document.getElementById(id);
 const fmt = (n, decimals = 2) =>
   parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
-const fmtUSD = n => '$' + Math.round(parseFloat(n)).toLocaleString('en-US');
+// Selalu tanpa desimal, tanpa tanda
+const fmtAbs = n => '$' + Math.round(Math.abs(parseFloat(n))).toLocaleString('en-US');
+
+// Dengan tanda +/- di depan $
+const fmtUSD = n => {
+  const num = parseFloat(n);
+  if (num < 0) return '-' + fmtAbs(num);
+  return fmtAbs(num);
+};
+
+// Dengan tanda + untuk positif
+const fmtUSDSigned = n => {
+  const num = parseFloat(n);
+  if (num > 0) return '+' + fmtAbs(num);
+  if (num < 0) return '-' + fmtAbs(num);
+  return fmtAbs(num);
+};
 
 const fmtPct = n => (parseFloat(n) >= 0 ? '+' : '') + fmt(n, 2) + '%';
 
@@ -31,17 +47,14 @@ function formatDate(str) {
 
 function getDuration(open, close) {
   if (!open || !close) return '—';
-  const openDate = open.includes('/') ? parseMyDate(open) : new Date(open);
-  const closeDate = close.includes('/') ? parseMyDate(close) : new Date(close);
-  const days = Math.floor((closeDate - openDate) / 86400000);
+  const parseD = s => {
+    const [datePart] = s.split(' ');
+    const [mm, dd, yyyy] = datePart.split('/');
+    return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+  };
+  const days = Math.floor((parseD(close) - parseD(open)) / 86400000);
   if (days === 0) return '1D';
   return days + 'D';
-}
-
-function parseMyDate(str) {
-  const [datePart] = str.split(' ');
-  const [mm, dd, yyyy] = datePart.split('/');
-  return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
 }
 
 // ── Render functions ──────────────────────────────────────────────────────────
@@ -60,7 +73,7 @@ function renderKPIs(a) {
   const gain = parseFloat(a.gain);
   $('kpi-gain').textContent     = fmtPct(gain);
   $('kpi-gain').className       = 'kpi-value ' + (gain >= 0 ? 'green' : 'red');
-  $('kpi-gain-sub').textContent = 'Abs: ' + fmtUSD(a.profit);
+  $('kpi-gain-sub').textContent = 'Abs: ' + fmtUSDSigned(a.profit);
 
   $('kpi-winrate').textContent     = (a.winRate ?? '—') + '%';
   $('kpi-winrate-sub').textContent = 'From ' + (a.trades ?? 0) + ' trades';
@@ -77,7 +90,7 @@ function renderKPIs(a) {
   $('dw-withdrawals').textContent = fmtUSD(a.withdrawals);
 
   const profit = parseFloat(a.profit);
-  $('dw-netprofit').textContent = (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit));
+  $('dw-netprofit').textContent = fmtUSDSigned(profit);
   $('dw-netprofit').className   = 'kpi-value ' + (profit >= 0 ? 'green' : 'red');
 
   $('dw-equity').textContent = fmtUSD(a.equity);
@@ -115,9 +128,7 @@ function renderEquityChart(curve) {
           titleColor: '#8A9BB0', bodyColor: '#F5F0E8',
           bodyFont: { family: 'Manrope', size: 13, weight: '500' },
           padding: 14,
-          callbacks: {
-            label: c => ' ' + fmtUSD(c.raw),
-          }
+          callbacks: { label: c => ' ' + fmtUSD(c.raw) }
         }
       },
       scales: {
@@ -155,14 +166,13 @@ function renderOpenTrades(openTrades) {
   grid.innerHTML = '';
   openTrades.forEach(t => {
     const profit = parseFloat(t.profit);
-    const typeStr = String(t.type).toLowerCase();
-    const isBuy = typeStr === 'buy' || typeStr === '0';
+    const isBuy = String(t.type).toLowerCase() === 'buy' || t.type === '0';
     const card = document.createElement('div');
     card.className = 'open-trade-card';
     card.innerHTML =
       '<div class="otc-top">' +
         '<span class="otc-pair">' + t.pair + '</span>' +
-        '<span class="otc-profit ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit)) + '</span>' +
+        '<span class="otc-profit ' + (profit >= 0 ? 'pos' : 'neg') + '">' + fmtUSDSigned(profit) + '</span>' +
       '</div>' +
       '<div class="otc-meta">' +
         '<span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span>' +
@@ -181,7 +191,7 @@ function renderOpenTrades(openTrades) {
 function renderTrades(trades) {
   if (!trades || !trades.length) {
     $('trade-cards-mobile').innerHTML = '<div class="no-open">No trade history yet.</div>';
-    $('trade-table-body').innerHTML   = '<tr><td colspan="6" style="text-align:center;color:#5A6B7E;">No trade history yet.</td></tr>';
+    $('trade-table-body').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#5A6B7E;">No trade history yet.</td></tr>';
     return;
   }
 
@@ -189,17 +199,15 @@ function renderTrades(trades) {
   mobile.innerHTML = '';
   trades.slice(0, 10).forEach(t => {
     const profit = parseFloat(t.profit);
-    const dur = getDuration(t.openTime, t.closeTime);
-    const typeStr = String(t.type).toLowerCase();
-    const isBuy = typeStr === 'buy' || typeStr === '0';
+    const isBuy = String(t.type).toLowerCase() === 'buy' || t.type === '0';
     const card = document.createElement('div');
     card.className = 'trade-card';
     card.innerHTML =
       '<div class="tc-top"><span class="tc-date">' + formatDate(t.closeTime) + '</span><span class="tc-pair">' + t.pair + '</span></div>' +
-      '<div class="tc-result ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit)) + '</div>' +
+      '<div class="tc-result ' + (profit >= 0 ? 'pos' : 'neg') + '">' + fmtUSDSigned(profit) + '</div>' +
       '<div class="tc-bottom">' +
         '<span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span>' +
-        '<span class="tc-dur">' + dur + '</span>' +
+        '<span class="tc-dur">' + getDuration(t.openTime, t.closeTime) + '</span>' +
       '</div>';
     mobile.appendChild(card);
   });
@@ -208,9 +216,7 @@ function renderTrades(trades) {
   tbody.innerHTML = '';
   trades.forEach(t => {
     const profit = parseFloat(t.profit);
-    const dur = getDuration(t.openTime, t.closeTime);
-    const typeStr = String(t.type).toLowerCase();
-    const isBuy = typeStr === 'buy' || typeStr === '0';
+    const isBuy = String(t.type).toLowerCase() === 'buy' || t.type === '0';
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td>' + formatDate(t.closeTime) + '</td>' +
@@ -218,7 +224,7 @@ function renderTrades(trades) {
       '<td><span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span></td>' +
       '<td>' + t.lots + '</td>' +
       '<td>' + (t.pips ?? '—') + '</td>' +
-      '<td class="' + (profit >= 0 ? 'result-pos' : 'result-neg') + '">' + (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit)) + '</td>';
+      '<td class="' + (profit >= 0 ? 'result-pos' : 'result-neg') + '">' + fmtUSDSigned(profit) + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -274,4 +280,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-      
+  
