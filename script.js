@@ -162,7 +162,7 @@ function renderOpenTrades(openTrades) {
     card.innerHTML =
       '<div class="otc-top">' +
         '<span class="otc-pair">' + t.pair + '</span>' +
-        '<span class="otc-profit ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '') + fmtUSD(profit) + '</span>' +
+        '<span class="otc-profit ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit)) + '</span>' +
       '</div>' +
       '<div class="otc-meta">' +
         '<span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span>' +
@@ -196,7 +196,7 @@ function renderTrades(trades) {
     card.className = 'trade-card';
     card.innerHTML =
       '<div class="tc-top"><span class="tc-date">' + formatDate(t.closeTime) + '</span><span class="tc-pair">' + t.pair + '</span></div>' +
-      '<div class="tc-result ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '') + fmtUSD(profit) + '</div>' +
+      '<div class="tc-result ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit)) + '</div>' +
       '<div class="tc-bottom">' +
         '<span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span>' +
         '<span class="tc-dur">' + dur + '</span>' +
@@ -218,7 +218,7 @@ function renderTrades(trades) {
       '<td><span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span></td>' +
       '<td>' + t.lots + '</td>' +
       '<td>' + (t.pips ?? '—') + '</td>' +
-      '<td class="' + (profit >= 0 ? 'result-pos' : 'result-neg') + '">' + (profit >= 0 ? '+' : '') + fmtUSD(profit) + '</td>';
+      '<td class="' + (profit >= 0 ? 'result-pos' : 'result-neg') + '">' + (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit)) + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -274,4 +274,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-    
+                  
