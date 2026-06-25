@@ -280,4 +280,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-  
+    
