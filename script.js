@@ -30,8 +30,8 @@ function getDuration(open, close) {
   if (!open || !close) return '—';
   const diff = new Date(close) - new Date(open);
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return 'Intraday';
-  return days + (days === 1 ? ' Day' : ' Days');
+  if (days === 0) return '1D';
+  return days + 'D';
 }
 
 // ── Render functions ──────────────────────────────────────────────────────────
@@ -271,4 +271,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-    
+      
