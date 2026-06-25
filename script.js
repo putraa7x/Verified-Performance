@@ -1,20 +1,23 @@
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const API_URL = 'https://indrafxidportfoliof690.indranovita572.workers.dev/';
-const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 // ── Chart instance ────────────────────────────────────────────────────────────
 let equityChart = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const fmt = (n, decimals = 2) => parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+const fmt = (n, decimals = 2) =>
+  parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
 const fmtUSD = n => '$' + Math.round(parseFloat(n)).toLocaleString('en-US');
+
 const fmtPct = n => (parseFloat(n) >= 0 ? '+' : '') + fmt(n, 2) + '%';
 
 function formatDate(str) {
   if (!str) return '—';
-  // Handle Myfxbook format: "MM/DD/YYYY HH:MM" atau "YYYY-MM-DD"
   let d;
   if (str.includes('/')) {
     const [datePart] = str.split(' ');
@@ -28,10 +31,17 @@ function formatDate(str) {
 
 function getDuration(open, close) {
   if (!open || !close) return '—';
-  const diff = new Date(close) - new Date(open);
-  const days = Math.floor(diff / 86400000);
+  const openDate = open.includes('/') ? parseMyDate(open) : new Date(open);
+  const closeDate = close.includes('/') ? parseMyDate(close) : new Date(close);
+  const days = Math.floor((closeDate - openDate) / 86400000);
   if (days === 0) return '1D';
   return days + 'D';
+}
+
+function parseMyDate(str) {
+  const [datePart] = str.split(' ');
+  const [mm, dd, yyyy] = datePart.split('/');
+  return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
 }
 
 // ── Render functions ──────────────────────────────────────────────────────────
@@ -40,39 +50,37 @@ function renderKPIs(a) {
   $('hero-gain').textContent     = fmtPct(a.gain);
   $('hero-drawdown').textContent = a.drawdown + '%';
 
-  // Dynamic badge: demo vs live
   const isDemo = a.demo;
-  $('badge-dot').className   = 'badge-dot' + (isDemo ? ' demo' : '');
+  $('badge-dot').className     = 'badge-dot' + (isDemo ? ' demo' : '');
   $('badge-label').textContent = isDemo ? 'Demo Account' : 'Live Account';
 
   $('kpi-balance').textContent     = fmtUSD(a.balance);
-  $('kpi-balance-sub').textContent = '↑ from ' + fmtUSD(a.deposits);
+  $('kpi-balance-sub').textContent = 'from ' + fmtUSD(a.deposits);
 
   const gain = parseFloat(a.gain);
-  $('kpi-gain').textContent      = fmtPct(gain);
-  $('kpi-gain').className        = 'kpi-value ' + (gain >= 0 ? 'green' : 'red');
-  $('kpi-gain-sub').textContent  = 'Abs: ' + fmtUSD(a.profit);
+  $('kpi-gain').textContent     = fmtPct(gain);
+  $('kpi-gain').className       = 'kpi-value ' + (gain >= 0 ? 'green' : 'red');
+  $('kpi-gain-sub').textContent = 'Abs: ' + fmtUSD(a.profit);
 
   $('kpi-winrate').textContent     = (a.winRate ?? '—') + '%';
-  $('kpi-winrate-sub').textContent = 'Win days tracked';
+  $('kpi-winrate-sub').textContent = 'From ' + (a.trades ?? 0) + ' trades';
 
   $('kpi-drawdown').textContent = a.drawdown + '%';
-
-  $('kpi-pf').textContent = a.profitFactor;
+  $('kpi-pf').textContent       = a.profitFactor;
 
   const daily = parseFloat(a.dailyGain);
-  $('kpi-daily').textContent     = fmtPct(daily);
-  $('kpi-daily').className       = 'kpi-value ' + (daily >= 0 ? 'green' : 'red');
-  $('kpi-monthly').textContent   = 'Monthly: ' + fmtPct(a.monthlyGain);
+  $('kpi-daily').textContent   = fmtPct(daily);
+  $('kpi-daily').className     = 'kpi-value ' + (daily >= 0 ? 'green' : 'red');
+  $('kpi-monthly').textContent = 'Monthly: ' + fmtPct(a.monthlyGain);
 
   $('dw-deposits').textContent    = fmtUSD(a.deposits);
   $('dw-withdrawals').textContent = fmtUSD(a.withdrawals);
 
   const profit = parseFloat(a.profit);
-  $('dw-netprofit').textContent   = fmtUSD(profit);
-  $('dw-netprofit').className     = 'kpi-value ' + (profit >= 0 ? 'green' : 'red');
+  $('dw-netprofit').textContent = fmtUSD(profit);
+  $('dw-netprofit').className   = 'kpi-value ' + (profit >= 0 ? 'green' : 'red');
 
-  $('dw-equity').textContent      = fmtUSD(a.equity);
+  $('dw-equity').textContent = fmtUSD(a.equity);
 }
 
 function renderEquityChart(curve) {
@@ -108,13 +116,13 @@ function renderEquityChart(curve) {
           bodyFont: { family: 'Manrope', size: 13, weight: '500' },
           padding: 14,
           callbacks: {
-            label: c => ' $' + c.raw.toLocaleString(),
+            label: c => ' ' + fmtUSD(c.raw),
           }
         }
       },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5A6B7E', font: { family: 'Manrope', size: 11 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5A6B7E', font: { family: 'Manrope', size: 11 }, callback: v => '$' + (v/1000).toFixed(1) + 'k' } }
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5A6B7E', font: { family: 'Manrope', size: 11 }, callback: v => fmtUSD(v) } }
       }
     }
   });
@@ -129,11 +137,10 @@ function renderMonthly(monthly) {
     const val = hasData ? parseFloat(m.gain) : null;
     const tile = document.createElement('div');
     tile.className = 'month-tile' + (hasData ? (val >= 0 ? ' positive' : ' negative') : '');
-    tile.innerHTML = `
-      <div class="month-name">${m.name}</div>
-      <div class="month-pct ${hasData ? (val >= 0 ? 'pos' : 'neg') : 'na'}">
-        ${hasData ? fmtPct(val) : '—'}
-      </div>`;
+    tile.innerHTML =
+      '<div class="month-name">' + m.name + '</div>' +
+      '<div class="month-pct ' + (hasData ? (val >= 0 ? 'pos' : 'neg') : 'na') + '">' +
+      (hasData ? fmtPct(val) : '—') + '</div>';
     grid.appendChild(tile);
   });
 }
@@ -152,21 +159,21 @@ function renderOpenTrades(openTrades) {
     const isBuy = typeStr === 'buy' || typeStr === '0';
     const card = document.createElement('div');
     card.className = 'open-trade-card';
-    card.innerHTML = `
-      <div class="otc-top">
-        <span class="otc-pair">${t.pair}</span>
-        <span class="otc-profit ${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${fmtUSD(profit)}</span>
-      </div>
-      <div class="otc-meta">
-        <span class="type-pill ${isBuy ? 'buy' : 'sell'}">${t.type}</span>
-        <span class="otc-detail">${t.lots} lots</span>
-        <span class="otc-detail">@ ${t.openPrice}</span>
-      </div>
-      <div class="otc-meta">
-        <span class="otc-detail">Opened: ${formatDate(t.openTime)}</span>
-        <span class="otc-detail">Swap: ${t.swap ?? 0}</span>
-        <span class="otc-detail">Pips: ${t.pips ?? '—'}</span>
-      </div>`;
+    card.innerHTML =
+      '<div class="otc-top">' +
+        '<span class="otc-pair">' + t.pair + '</span>' +
+        '<span class="otc-profit ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '') + fmtUSD(profit) + '</span>' +
+      '</div>' +
+      '<div class="otc-meta">' +
+        '<span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span>' +
+        '<span class="otc-detail">' + t.lots + ' lots</span>' +
+        '<span class="otc-detail">@ ' + t.openPrice + '</span>' +
+      '</div>' +
+      '<div class="otc-meta">' +
+        '<span class="otc-detail">Opened: ' + formatDate(t.openTime) + '</span>' +
+        '<span class="otc-detail">Swap: ' + (t.swap ?? 0) + '</span>' +
+        '<span class="otc-detail">Pips: ' + (t.pips ?? '—') + '</span>' +
+      '</div>';
     grid.appendChild(card);
   });
 }
@@ -178,7 +185,6 @@ function renderTrades(trades) {
     return;
   }
 
-  // Mobile cards
   const mobile = $('trade-cards-mobile');
   mobile.innerHTML = '';
   trades.slice(0, 10).forEach(t => {
@@ -188,17 +194,16 @@ function renderTrades(trades) {
     const isBuy = typeStr === 'buy' || typeStr === '0';
     const card = document.createElement('div');
     card.className = 'trade-card';
-    card.innerHTML = `
-      <div class="tc-top"><span class="tc-date">${formatDate(t.closeTime)}</span><span class="tc-pair">${t.pair}</span></div>
-      <div class="tc-result ${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${fmtUSD(profit)}</div>
-      <div class="tc-bottom">
-        <span class="type-pill ${isBuy ? 'buy' : 'sell'}">${t.type}</span>
-        <span class="tc-dur">${dur}</span>
-      </div>`;
+    card.innerHTML =
+      '<div class="tc-top"><span class="tc-date">' + formatDate(t.closeTime) + '</span><span class="tc-pair">' + t.pair + '</span></div>' +
+      '<div class="tc-result ' + (profit >= 0 ? 'pos' : 'neg') + '">' + (profit >= 0 ? '+' : '') + fmtUSD(profit) + '</div>' +
+      '<div class="tc-bottom">' +
+        '<span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span>' +
+        '<span class="tc-dur">' + dur + '</span>' +
+      '</div>';
     mobile.appendChild(card);
   });
 
-  // Desktop table
   const tbody = $('trade-table-body');
   tbody.innerHTML = '';
   trades.forEach(t => {
@@ -207,13 +212,13 @@ function renderTrades(trades) {
     const typeStr = String(t.type).toLowerCase();
     const isBuy = typeStr === 'buy' || typeStr === '0';
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${formatDate(t.closeTime)}</td>
-      <td>${t.pair}</td>
-      <td><span class="type-pill ${isBuy ? 'buy' : 'sell'}">${t.type}</span></td>
-      <td><span class="dur">${dur}</span></td>
-      <td>${t.pips ?? '—'}</td>
-      <td class="${profit >= 0 ? 'result-pos' : 'result-neg'}">${profit >= 0 ? '+' : ''}${fmtUSD(profit)}</td>`;
+    tr.innerHTML =
+      '<td>' + formatDate(t.closeTime) + '</td>' +
+      '<td>' + t.pair + '</td>' +
+      '<td><span class="type-pill ' + (isBuy ? 'buy' : 'sell') + '">' + t.type + '</span></td>' +
+      '<td>' + t.lots + '</td>' +
+      '<td>' + (t.pips ?? '—') + '</td>' +
+      '<td class="' + (profit >= 0 ? 'result-pos' : 'result-neg') + '">' + (profit >= 0 ? '+' : '') + fmtUSD(profit) + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -229,7 +234,6 @@ function renderLastUpdated(iso) {
 // ── Main data loader ──────────────────────────────────────────────────────────
 async function loadData() {
   $('error-banner').style.display = 'none';
-
   try {
     const res  = await fetch(API_URL);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -239,8 +243,8 @@ async function loadData() {
     renderKPIs(data.account);
     if (data.equityCurve && data.equityCurve.length) renderEquityChart(data.equityCurve);
     renderMonthly(data.monthly);
-    renderOpenTrades(data.openTrades  || []);
-    renderTrades(data.trades          || []);   // trades belum ada di Worker (perlu get-history)
+    renderOpenTrades(data.openTrades || []);
+    renderTrades(data.trades || []);
     renderLastUpdated(data.updatedAt);
 
   } catch (err) {
@@ -250,7 +254,6 @@ async function loadData() {
     const overlay = $('loading-overlay');
     overlay.classList.add('hidden');
     setTimeout(() => overlay.style.display = 'none', 700);
-
     document.querySelectorAll('.reveal').forEach(el => {
       setTimeout(() => el.classList.add('visible'), 100);
     });
@@ -271,4 +274,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-      
+    
