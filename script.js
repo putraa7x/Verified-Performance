@@ -9,7 +9,7 @@ let equityChart = null;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const fmt = (n, decimals = 2) => parseFloat(n).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-const fmtUSD = n => '$' + fmt(n, 2);
+const fmtUSD = n => '$' + Math.round(parseFloat(n)).toLocaleString('en-US');
 const fmtPct = n => (parseFloat(n) >= 0 ? '+' : '') + fmt(n, 2) + '%';
 
 function formatDate(str) {
@@ -23,7 +23,7 @@ function getDuration(open, close) {
   const diff = new Date(close) - new Date(open);
   const days = Math.floor(diff / 86400000);
   if (days === 0) return 'Intraday';
-  return days + (days === 1 ? ' day' : ' days');
+  return days + 'D';
 }
 
 // ── Render functions ──────────────────────────────────────────────────────────
@@ -263,4 +263,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-        
+    
