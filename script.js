@@ -77,7 +77,7 @@ function renderKPIs(a) {
   $('dw-withdrawals').textContent = fmtUSD(a.withdrawals);
 
   const profit = parseFloat(a.profit);
-  $('dw-netprofit').textContent = fmtUSD(profit);
+  $('dw-netprofit').textContent = (profit >= 0 ? '+' : '-') + fmtUSD(Math.abs(profit));
   $('dw-netprofit').className   = 'kpi-value ' + (profit >= 0 ? 'green' : 'red');
 
   $('dw-equity').textContent = fmtUSD(a.equity);
@@ -274,4 +274,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
 setInterval(loadData, AUTO_REFRESH_MS);
-                  
+      
