@@ -14,7 +14,15 @@ const fmtPct = n => (parseFloat(n) >= 0 ? '+' : '') + fmt(n, 2) + '%';
 
 function formatDate(str) {
   if (!str) return '—';
-  const d = new Date(str);
+  // Handle Myfxbook format: "MM/DD/YYYY HH:MM" atau "YYYY-MM-DD"
+  let d;
+  if (str.includes('/')) {
+    const [datePart] = str.split(' ');
+    const [mm, dd, yyyy] = datePart.split('/');
+    d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+  } else {
+    d = new Date(str);
+  }
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
