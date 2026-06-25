@@ -28,18 +28,29 @@ function getDuration(open, close) {
 
 // ── Render functions ──────────────────────────────────────────────────────────
 function renderKPIs(a) {
-  $('hero-balance').textContent = fmtUSD(a.balance);
-  $('hero-gain').textContent    = fmtPct(a.gain);
-  $('hero-trades').textContent  = a.trades ?? '—';
+  $('hero-balance').textContent  = fmtUSD(a.balance);
+  $('hero-gain').textContent     = fmtPct(a.gain);
+  $('hero-drawdown').textContent = a.drawdown + '%';
+
+  // Dynamic badge: demo vs live
+  const isDemo = a.demo;
+  $('badge-dot').className   = 'badge-dot' + (isDemo ? ' demo' : '');
+  $('badge-label').textContent = isDemo ? 'Demo Account' : 'Live Account';
 
   $('kpi-balance').textContent     = fmtUSD(a.balance);
   $('kpi-balance-sub').textContent = '↑ from ' + fmtUSD(a.deposits);
-  $('kpi-gain').textContent        = fmtPct(a.gain);
-  $('kpi-gain-sub').textContent    = 'Abs: ' + fmtUSD(a.profit);   // FIX: pakai a.profit bukan a.absGain (absGain = %, profit = $)
+
+  const gain = parseFloat(a.gain);
+  $('kpi-gain').textContent      = fmtPct(gain);
+  $('kpi-gain').className        = 'kpi-value ' + (gain >= 0 ? 'green' : 'red');
+  $('kpi-gain-sub').textContent  = 'Abs: ' + fmtUSD(a.profit);
+
   $('kpi-winrate').textContent     = (a.winRate ?? '—') + '%';
-  $('kpi-winrate-sub').textContent = 'Win days tracked';            // FIX: wonTrades & trades null dari Worker, pakai label ini
-  $('kpi-drawdown').textContent    = a.drawdown + '%';              // FIX: field drawdown bukan maxDrawdown
-  $('kpi-pf').textContent          = a.profitFactor;
+  $('kpi-winrate-sub').textContent = 'Win days tracked';
+
+  $('kpi-drawdown').textContent = a.drawdown + '%';
+
+  $('kpi-pf').textContent = a.profitFactor;
 
   const daily = parseFloat(a.dailyGain);
   $('kpi-daily').textContent     = fmtPct(daily);
@@ -48,7 +59,11 @@ function renderKPIs(a) {
 
   $('dw-deposits').textContent    = fmtUSD(a.deposits);
   $('dw-withdrawals').textContent = fmtUSD(a.withdrawals);
-  $('dw-netprofit').textContent   = fmtUSD(a.profit);              // FIX: langsung pakai a.profit dari Worker
+
+  const profit = parseFloat(a.profit);
+  $('dw-netprofit').textContent   = fmtUSD(profit);
+  $('dw-netprofit').className     = 'kpi-value ' + (profit >= 0 ? 'green' : 'red');
+
   $('dw-equity').textContent      = fmtUSD(a.equity);
 }
 
