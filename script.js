@@ -31,7 +31,7 @@ function getDuration(open, close) {
   const diff = new Date(close) - new Date(open);
   const days = Math.floor(diff / 86400000);
   if (days === 0) return 'Intraday';
-  return days + 'D';
+  return days + (days === 1 ? ' Day' : ' Days');
 }
 
 // ── Render functions ──────────────────────────────────────────────────────────
